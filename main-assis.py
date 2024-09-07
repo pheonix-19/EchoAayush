@@ -1,24 +1,32 @@
-import os
+
 import pyttsx3
 import speech_recognition as sr
 import webbrowser
 import openai
 import datetime
+import platform
+import subprocess
 
-#code for ai
+import os
+from openai import OpenAI
 # Initialize global variables
 chatStr = ""
+from dotenv import load_dotenv
+load_dotenv()
+
 apikey = os.getenv('OPENAI_API_KEY')
 
-from openai import OpenAI
-
 client = OpenAI(api_key=apikey)
+
+# Initialize OpenAI client
+
+
 
 def chat(query):
     global chatStr
     chatStr += f"User: {query}\nAssistant: "
     response = client.chat.completions.create(
-        model="gpt-3.5-turbo",  # or another suitable model
+        model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": chatStr}
@@ -27,7 +35,7 @@ def chat(query):
         max_tokens=256
     )
     reply = response.choices[0].message.content.strip()
-    print(f"AI: {reply}")  # Print the AI response
+    print(f"AI: {reply}")
     say(reply)
     chatStr += f"{reply}\n"
     return reply
@@ -44,10 +52,9 @@ def ai(prompt):
         presence_penalty=0
     )
     text = response.choices[0].text.strip()
-    print(f"AI: {text}")  # Print the AI response
+    print(f"AI: {text}")
     if not os.path.exists("Openai"):
         os.mkdir("Openai")
-    # Use a more reliable naming strategy for files
     safe_prompt = ''.join(char for char in prompt if char.isalnum() or char in (' ', '_')).strip()
     with open(f"Openai/{safe_prompt}.txt", "w") as f:
         f.write(text)
@@ -82,8 +89,59 @@ def take_command():
             print("Could not request results from Google Speech Recognition service.")
             return "Service unavailable."
 
+# Function to get app name based on query
+def get_app_name(query):
+    prompt = f"Based on the user query '{query}', suggest a specific application name that would be most relevant. Only return the application name, nothing else."
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant that suggests relevant application names based on user queries."},
+            {"role": "user", "content": prompt}
+        ]
+    )
+    suggested_app = response.choices[0].message.content.strip()
+    return suggested_app
+
+# Function to open the app
+def open_app(app_name):
+    system = platform.system()
+
+    if system == "Windows":
+        try:
+            os.startfile(app_name)
+        except FileNotFoundError:
+            print(f"Could not find the application: {app_name}")
+    elif system == "Darwin":  # macOS
+        try:
+            subprocess.call(["open", "-a", app_name])
+        except subprocess.CalledProcessError:
+            print(f"Could not open the application: {app_name}")
+    elif system == "Linux":
+        try:
+            subprocess.Popen([app_name])
+        except FileNotFoundError:
+            print(f"Could not find the application: {app_name}")
+    else:
+        print(f"Unsupported operating system: {system}")
+
+# Function to get website URL based on query
+def get_website_url(query):
+    prompt = f"Based on the user query '{query}', suggest a specific website URL that would be most relevant and helpful. Only return the URL, nothing else."
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant that suggests relevant website URLs based on user queries."},
+            {"role": "user", "content": prompt}
+        ]
+    )
+    suggested_url = response.choices[0].message.content.strip()
+    return suggested_url
+
+def open_website(url):
+    webbrowser.open(url)
+
 if __name__ == '__main__':
-    say("Hello I am  Aayush A usefull personal assistant")
+    say("Hello, I am Aayush, a useful personal assistant.")
     while True:
         print("Listening...")
         query = take_command()
@@ -94,11 +152,21 @@ if __name__ == '__main__':
             url = get_site_url(site_query)
             if url:
                 say(f"Opening {site_query} for you")
-                webbrowser.open_new_tab(url)
+                open_website(url)
             else:
                 say("Sorry, I could not find the URL for that site.")
 
-        # Open music (Note: `os.system("open ...")` is for macOS; for Windows use `start`)
+        # Check if the query is to open an app
+        elif "open app" in query.lower():
+            app_query = query.lower().replace("open app", "").strip()
+            app_name = get_app_name(app_query)
+            if app_name:
+                say(f"Opening {app_name} for you")
+                open_app(app_name)
+            else:
+                say("Sorry, I could not find the application.")
+
+        # Open music
         elif "open music" in query.lower():
             musicpath = ""  # Specify your music path here
             if os.name == 'nt':  # Windows
