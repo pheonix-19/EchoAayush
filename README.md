@@ -1,6 +1,7 @@
-# EchoAayush
-Project Report: Aayush – The Personal AI Assistant
-Project Overview
+#### EchoAayush
+
+##Project Report: Aayush – The Personal AI Assistant
+#Project Overview
 The project is a Python-based personal assistant named "Aayush," designed to assist users with a variety of tasks through voice commands. The assistant integrates speech recognition, text-to-speech, web browsing, AI-driven responses, and file management functionalities. It leverages OpenAI's models for generating intelligent responses and handling user queries.
 
 Key Components
